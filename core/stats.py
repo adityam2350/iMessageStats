@@ -10,7 +10,7 @@ This makes each leaderboard independently testable and easy to extend.
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 
-from models import Message, Participant, Reaction, ReactionType
+from core.models import Message, Participant, Reaction, ReactionType
 
 
 BANGER_HAHA_THRESHOLD = 3  # A message needs this many HaHas to be a "banger"
@@ -147,8 +147,6 @@ def messages_sent_leaderboard(messages: list[Message]) -> list[LeaderboardEntry]
     counts = Counter(m.sender for m in messages)
     return _to_leaderboard(counts)
 
-
-# ── Private helpers ────────────────────────────────────────────────────────────
 
 def _reactions_received_by_type(
     reactions: list[Reaction],

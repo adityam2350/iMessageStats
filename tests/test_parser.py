@@ -10,9 +10,9 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from db import ME_HANDLE_ID, RawHandle, RawMessage, normalize_reaction_target_guid
-from models import ReactionType
-from parser import build_participant_map, parse_messages_and_reactions
+from core.db import ME_HANDLE_ID, RawHandle, RawMessage, normalize_reaction_target_guid
+from core.models import ReactionType
+from core.parser import build_participant_map, parse_messages_and_reactions
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

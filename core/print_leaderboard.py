@@ -1,38 +1,42 @@
 """
-display.py — Terminal output using the Rich library.
+print_leaderboard.py — Render a validated leaderboard JSON document to the terminal.
 
-Responsible for:
-  - Rendering leaderboards as styled tables
-  - Formatting the summary header
-  - Formatting the chat picker list
-
-This module knows nothing about how stats are calculated.
-It only knows how to display data it receives.
+Reads JSON via serializer, converts rows to domain entry types, and prints Rich tables.
 """
 
-from datetime import datetime, timezone
+from __future__ import annotations
+
+from collections.abc import Callable
+from datetime import datetime
+from pathlib import Path
 
 from rich import box
 from rich.columns import Columns
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
-from models import ChatSummary, ReactionType
-from stats import BangerEntry, LeaderboardEntry
-
+from core.models import ChatSummary, Participant, ReactionType
+from core.serializer import from_dict, read_json
+from core.stats import BangerEntry, LeaderboardEntry
 
 console = Console()
-
 RANK_MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
 
 
 def _leaderboard_slice(entries: list, top_n: int | None) -> list:
-    """All entries when top_n is None; otherwise first top_n rows."""
     if top_n is None:
         return entries
     return entries[:top_n]
+
+
+def _format_date_range(earliest: datetime | None, latest: datetime | None) -> str:
+    if not earliest or not latest:
+        return "No messages"
+    fmt = "%b %Y"
+    if earliest.month == latest.month and earliest.year == latest.year:
+        return earliest.strftime(fmt)
+    return f"{earliest.strftime(fmt)} – {latest.strftime(fmt)}"
 
 
 def print_chat_summary(summary: ChatSummary) -> None:
@@ -54,14 +58,8 @@ def print_leaderboard(
     entries: list[LeaderboardEntry],
     top_n: int | None = None,
     value_label: str = "",
-    value_formatter: callable = str,
+    value_formatter: Callable[[int], str] = str,
 ) -> Table:
-    """
-    Render a generic leaderboard table.
-
-    value_formatter lets callers control how the count is displayed,
-    e.g. for RRPM which should display as a decimal rather than an integer.
-    """
     table = Table(
         title=f"{emoji} {title}",
         box=box.SIMPLE_HEAD,
@@ -90,9 +88,8 @@ def print_leaderboard(
 
 
 def print_most_haha_messages_table(entries: list[BangerEntry], top_n: int | None = None) -> Table:
-    """Messages with the most HaHas (3+); author shown with each quote."""
     table = Table(
-        title="😂 Messages with the Most HaHas  (3+ per message)",
+        title="😂 Messages with the Most HaHas",
         box=box.SIMPLE_HEAD,
         title_style="bold white",
         header_style="dim",
@@ -128,12 +125,7 @@ def print_all_leaderboards(
     questions_received: list[LeaderboardEntry],
     top_n: int | None = None,
 ) -> None:
-    """
-    Print all leaderboards in a two-column layout where possible,
-    with wide tables for message-level HaHa leaders and participant bangers.
-    """
     def rrpm_formatter(count: int) -> str:
-        # RRPM is stored as count × 100 for integer storage; reverse here for display.
         return f"{count / 100:.2f}"
 
     table_messages = print_leaderboard(
@@ -178,35 +170,81 @@ def print_all_leaderboards(
     console.print(table_bangers)
 
 
-def print_chat_picker(chats: list) -> None:
-    """Display available group chats for the user to choose from."""
-    table = Table(
-        title="Available Group Chats",
-        box=box.SIMPLE_HEAD,
-        title_style="bold white",
-        header_style="dim",
+def _parse_summary_block(s: object) -> ChatSummary:
+    if not isinstance(s, dict):
+        s = {}
+    def _dt(key: str) -> datetime | None:
+        v = s.get(key)
+        if not v:
+            return None
+        return datetime.fromisoformat(str(v))
+
+    return ChatSummary(
+        display_name=str(s.get("display_name", "")),
+        participant_count=int(s.get("participant_count", 0)),
+        message_count=int(s.get("message_count", 0)),
+        reaction_count=int(s.get("reaction_count", 0)),
+        earliest_message=_dt("earliest_message"),
+        latest_message=_dt("latest_message"),
     )
-    table.add_column("ID", style="dim", width=6, justify="right")
-    table.add_column("Name / GUID")
-
-    for chat in chats:
-        name = chat.display_name or f"[dim]{chat.guid}[/dim]"
-        table.add_row(str(chat.chat_id), name)
-
-    console.print(table)
-    console.print("\nUse [bold cyan]--chat-id <ID>[/bold cyan] to analyze a chat.")
 
 
-def print_error(message: str) -> None:
-    console.print(f"\n[bold red]Error:[/bold red] {message}\n")
+def _rows_to_leaderboard_entries(rows: object) -> list[LeaderboardEntry]:
+    if not isinstance(rows, list):
+        return []
+    out: list[LeaderboardEntry] = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        out.append(
+            LeaderboardEntry(
+                rank=int(r["rank"]),
+                participant=Participant(str(r["participant"])),
+                count=int(r["count"]),
+            )
+        )
+    return out
 
 
-# ── Private helpers ────────────────────────────────────────────────────────────
+def _rows_to_banger_entries(rows: object) -> list[BangerEntry]:
+    if not isinstance(rows, list):
+        return []
+    out: list[BangerEntry] = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        out.append(
+            BangerEntry(
+                rank=int(r["rank"]),
+                sender=Participant(str(r["sender"])),
+                text=str(r.get("text", "")),
+                haha_count=int(r["haha_count"]),
+            )
+        )
+    return out
 
-def _format_date_range(earliest: datetime | None, latest: datetime | None) -> str:
-    if not earliest or not latest:
-        return "No messages"
-    fmt = "%b %Y"
-    if earliest.month == latest.month and earliest.year == latest.year:
-        return earliest.strftime(fmt)
-    return f"{earliest.strftime(fmt)} – {latest.strftime(fmt)}"
+
+def render_leaderboard_file(path: Path | str, top_n: int | None = 5) -> None:
+    """
+    Read a leaderboard JSON file from disk, validate it, and print all tables.
+
+    ``top_n`` limits how many rows are shown per leaderboard (``None`` = show all).
+    """
+    raw = read_json(path)
+    doc = from_dict(raw)
+    summary = _parse_summary_block(doc.get("summary"))
+    lb = doc["leaderboards"]
+
+    print_chat_summary(summary)
+    print_all_leaderboards(
+        messages_sent=_rows_to_leaderboard_entries(lb.get("messages_sent")),
+        reaction_receivers=_rows_to_leaderboard_entries(lb.get("reaction_receivers")),
+        reaction_givers=_rows_to_leaderboard_entries(lb.get("reaction_givers")),
+        rrpm=_rows_to_leaderboard_entries(lb.get("rrpm")),
+        hahas_received=_rows_to_leaderboard_entries(lb.get("hahas_received")),
+        most_haha_messages=_rows_to_banger_entries(lb.get("most_haha_messages")),
+        bangers=_rows_to_leaderboard_entries(lb.get("bangers")),
+        emphasizes_received=_rows_to_leaderboard_entries(lb.get("emphasizes_received")),
+        questions_received=_rows_to_leaderboard_entries(lb.get("questions_received")),
+        top_n=top_n,
+    )

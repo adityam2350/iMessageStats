@@ -1,16 +1,16 @@
 # iMessage Group Chat Analyzer
 
-Analyze reactions, activity, and "bangers" in an iMessage group chat — all from the command line.
+Analyze reactions and activity in an iMessage group chat from the command line.
 
 ---
 
 ## Prerequisites
 
-**macOS only.** This tool reads from `~/Library/Messages/chat.db`.
+**macOS only.** This tool reads `~/Library/Messages/chat.db`.
 
-Your terminal app (Terminal, iTerm2, etc.) must have **Full Disk Access** enabled:
+Enable **Full Disk Access** for your terminal app:
 
-> System Settings → Privacy & Security → Full Disk Access → enable your terminal app
+**System Settings → Privacy & Security → Full Disk Access** → add Terminal, iTerm2, etc.
 
 ---
 
@@ -24,104 +24,118 @@ python -m pip install -r requirements.txt
 
 ---
 
-## Usage
+## Two-phase workflow
 
-### 1. Discover your group chats
+### Phase 1: Discovery (`discover.py`)
 
-```bash
-python main.py --list-chats
-```
+See what chats exist and who is in a chat **before** running analysis.
 
-This prints a table of all group chats with their numeric IDs.
-
-### 2. Analyze a chat
-
-```bash
-python main.py --chat-id 42
-```
-
-### 3. Limit leaderboard length (optional)
-
-By default every leaderboard lists **all** ranked rows. To cap at e.g. 10 rows per board:
+| Flag | Description |
+|------|-------------|
+| `--list-chats` | Print a table of all group chats and their numeric IDs. |
+| `--list-members` | Print one participant identifier (phone or Apple ID) per line. **Requires** `--chat-id`. |
+| `--chat-id <ID>` | Chat to inspect when using `--list-members`. |
 
 ```bash
-python main.py --chat-id 42 --top 10
+python discover.py --list-chats
+python discover.py --list-members --chat-id 42
 ```
 
-### 4. Export leaderboards as JSON
+You can combine both flags in one run (chats table first, then members).
 
-Writes one UTF-8 JSON file with `summary`, `chat_id`, `top_n_applied`, and a `leaderboards` object containing every board (same row cap as `--top` when set):
+### Phase 2: Analysis (`run.py`)
+
+Computes leaderboards from the database, writes **`data/leaderboard.json`**, then prints Rich tables by re-reading that file (unless `--json-only`).
+
+| Flag | Description |
+|------|-------------|
+| `--chat-id <ID>` | **Required.** Group chat to analyze. |
+| `--names <PATH>` | Optional JSON object mapping identifiers to display names, e.g. `{"+15551234567": "Alice"}`. Applied to the document **before** it is written and printed. |
+| `--top <N>` | Max rows per leaderboard in the terminal. **Default: 5.** |
+| `--json-only` | Only write `data/leaderboard.json`; do not print tables. |
+
+**Names file example** (`data/names.json` — create by hand or with your editor):
+
+```json
+{
+  "+15551234567": "Alice",
+  "alice@icloud.com": "Alice",
+  "bob@example.com": "Bob"
+}
+```
+
+### First-time workflow
 
 ```bash
-python main.py --chat-id 42 --json ./out/leaderboards.json
+# Phase 1: discovery
+python discover.py --list-chats
+python discover.py --list-members --chat-id 42
+
+# (optional) create data/names.json from the member list
+
+# Phase 2: analysis
+python run.py --chat-id 42 --names data/names.json
+
+# JSON only (e.g. for scripting)
+python run.py --chat-id 42 --json-only
 ```
-
-Parent directories are created if needed. RRPM rows include both `count` (stored as hundredths) and `rrpm` (float).
-
-### 5. Merge display names on exported JSON
-
-After exporting, you can fold multiple raw identifiers (phone, email, etc.) into one display name. Counts are summed and ranks recomputed; **RRPM** is recomputed from merged “messages sent” and “reaction receivers” totals.
-
-Mapping file: a JSON object with **string keys and string values** (identifier → name). Identifiers not listed are left as-is.
-
-```bash
-python scripts/merge_leaderboard_names.py \
-  --leaderboards out/leaderboards.json \
-  --mapping mapping.json \
-  --out out/leaderboards_merged.json
-```
-
-Omit `--out` to print JSON to stdout. The merged document includes `"display_names_merged": true`.
 
 ---
 
 ## Leaderboards
 
-| Leaderboard | Description |
-|---|---|
-| 📨 Messages Sent | Who talks the most |
-| 🏆 Reaction Receivers | Who gets the most reactions overall |
-| 🎁 Reaction Givers | Who gives the most reactions overall |
-| 📈 RRPM | Reactions Received Per Message — quality over quantity |
-| 😂 HaHas Received | Who gets laughed at the most |
-| 😂 Messages with the Most HaHas | Individual messages (3+ HaHas each), ranked by HaHa count; author shown with each line |
-| 💥 Bangers | Who authored the most messages that each earned 3+ HaHas |
-| ‼️ Emphasizes Received | Who gets the most emphasis reactions |
-| ❓ Questions Received | Whose messages generate the most questions |
+| Board | Meaning |
+|-------|---------|
+| Messages Sent | Who sends the most messages |
+| Reaction Receivers / Givers | Who receives or gives the most reactions |
+| RRPM | Reactions received per message |
+| HaHas Received | Who gets the most HaHa reactions |
+| Messages with the Most HaHas | Individual messages with 3+ HaHas |
+| Bangers | Who has the most messages that each earned 3+ HaHas |
+| Emphasizes / Questions Received | Emphasis and question reactions received |
 
 ---
 
-## Running Tests
+## Project layout
+
+```
+iMessageStats/
+├── discover.py
+├── run.py
+├── core/
+│   ├── db.py
+│   ├── parser.py
+│   ├── models.py
+│   ├── stats.py
+│   ├── serializer.py
+│   ├── apply_names.py
+│   └── print_leaderboard.py
+├── data/
+│   └── .gitkeep          # JSON outputs are gitignored (data/*.json)
+├── scripts/
+│   └── clean.py          # remove __pycache__, tool caches (see below)
+├── tests/
+└── requirements.txt
+```
+
+---
+
+## Tests
 
 ```bash
 python -m pytest -v
 ```
 
-All tests are pure unit tests — no database or file system required.
+Unit tests for `stats`, `parser`, `serializer`, and `db` helpers — no real `chat.db` required for most tests.
 
 ---
 
-## Project Structure
+## Clean up bytecode and tool caches
 
-```
-iMessageStats/
-├── main.py          # CLI entry point — wires everything together
-├── db.py            # Read-only SQLite access — all queries live here
-├── parser.py        # Transforms raw rows into clean domain objects
-├── models.py        # Plain data containers shared across the system
-├── stats.py         # Leaderboard calculations — pure functions, fully testable
-├── display.py       # Rich terminal output — knows nothing about calculations
-├── export_json.py   # Optional JSON export for leaderboards
-├── merge_display_names.py  # Merge leaderboard rows by display name (used by script below)
-├── scripts/
-│   └── merge_leaderboard_names.py  # CLI: apply mapping JSON to exported leaderboards
-├── tests/
-│   ├── test_stats.py
-│   ├── test_parser.py
-│   ├── test_db.py
-│   ├── test_export_json.py
-│   └── test_merge_display_names.py
-└── requirements.txt
-```
+Removes `__pycache__/`, `*.pyc` / `*.pyo`, and (by default) `.pytest_cache/`, `.mypy_cache/`, `.ruff_cache/`, `htmlcov/`, etc. Skips `.git` and top-level `.venv` / `venv` / `env`.
 
-`main.py` wires the pipeline together; other modules stay focused on one concern.
+```bash
+python scripts/clean.py              # delete
+python scripts/clean.py --dry-run    # preview
+python scripts/clean.py --only-bytecode   # only __pycache__ + .pyc files
+```

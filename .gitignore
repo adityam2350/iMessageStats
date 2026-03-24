@@ -35,5 +35,8 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
-# Local export output (e.g. --json out/leaderboards.json)
+# Local export output
 out/
+
+# Personal leaderboard / names JSON under data/ (directory kept via .gitkeep)
+data/*.json

@@ -1,12 +1,6 @@
 """
 parser.py — Transforms raw database rows into clean domain objects.
 
-Responsible for:
-  - Resolving handle IDs to Participant objects
-  - Separating messages from reactions
-  - Linking each reaction back to the original message's sender (the recipient)
-  - Filtering out reaction removals (3000-series types)
-
 Association GUID prefixes (``bp:``, ``p:n/``) are normalized in ``db.fetch_messages_for_chat``;
 ``associated_message_guid`` on ``RawMessage`` is already the lookup key for ``message.guid``.
 Everything downstream works with clean Message and Reaction objects.
@@ -14,8 +8,8 @@ Everything downstream works with clean Message and Reaction objects.
 
 from datetime import datetime, timezone
 
-from db import ME_HANDLE_ID, RawMessage, RawHandle, RawChat
-from models import ChatSummary, Message, Participant, Reaction, ReactionType
+from core.db import ME_HANDLE_ID, RawMessage, RawHandle, RawChat
+from core.models import ChatSummary, Message, Participant, Reaction, ReactionType
 
 
 def build_participant_map(handles: list[RawHandle]) -> dict[int, Participant]:
@@ -67,8 +61,6 @@ def build_chat_summary(
         latest_message=max(timestamps) if timestamps else None,
     )
 
-
-# ── Private helpers ────────────────────────────────────────────────────────────
 
 def _resolve_sender(handle_id: int, participant_map: dict[int, Participant]) -> Participant:
     """Unknown handle IDs (e.g. from deleted contacts) fall back gracefully."""

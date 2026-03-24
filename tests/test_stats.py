@@ -14,8 +14,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from models import Message, Participant, Reaction, ReactionType
-from stats import (
+from core.models import Message, Participant, Reaction, ReactionType
+from core.stats import (
     bangers_leaderboard,
     emphasizes_received_leaderboard,
     most_haha_messages_leaderboard,
