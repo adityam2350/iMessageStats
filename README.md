@@ -50,7 +50,7 @@ Computes leaderboards from the database, writes **`data/leaderboard.json`**, the
 | Flag | Description |
 |------|-------------|
 | `--chat-id <ID>` | **Required.** Group chat to analyze. |
-| `--names <PATH>` | Optional JSON object mapping identifiers to display names, e.g. `{"+15551234567": "Alice"}`. Applied to the document **before** it is written and printed. |
+| `--names <PATH>` | Optional JSON object mapping identifiers to display names. Multiple identifiers can map to the same name; their counts are **merged**, ranks and RRPM recomputed. |
 | `--top <N>` | Max rows per leaderboard in the terminal. **Default: 5.** |
 | `--json-only` | Only write `data/leaderboard.json`; do not print tables. |
 
