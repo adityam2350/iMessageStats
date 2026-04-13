@@ -17,17 +17,63 @@ from pathlib import Path
 from typing import Any
 
 
-def load_mapping(path: Path | str) -> dict[str, str]:
+class Config:
+    """Parsed user config: owner display name + identifier→name mapping."""
+    __slots__ = ("me", "names")
+
+    def __init__(self, me: str | None, names: dict[str, str]) -> None:
+        self.me = me
+        self.names = names
+
+    @property
+    def full_mapping(self) -> dict[str, str]:
+        """Names mapping including the ``Me → owner`` entry when set."""
+        if self.me is None:
+            return self.names
+        out = dict(self.names)
+        out["Me"] = self.me
+        return out
+
+
+def _validate_string_map(obj: Any, label: str) -> dict[str, str]:
+    if not isinstance(obj, dict):
+        raise ValueError(f"{label} must be a JSON object mapping strings to strings.")
+    out: dict[str, str] = {}
+    for k, v in obj.items():
+        if not isinstance(k, str) or not isinstance(v, str):
+            raise ValueError(f"{label} must use only string keys and string values.")
+        out[k] = v
+    return out
+
+
+def load_config(path: Path | str) -> Config:
+    """
+    Load a config JSON file.
+
+    Expected shape::
+
+        {
+          "me": "Your Name",
+          "names": { "+15551234567": "Alice", ... }
+        }
+
+    Both keys are optional. A flat object (no ``me`` / ``names`` keys) is
+    treated as a legacy names-only mapping for backward compatibility.
+    """
     path = Path(path)
     raw = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
-        raise ValueError("Names file must be a JSON object mapping strings to strings.")
-    out: dict[str, str] = {}
-    for k, v in raw.items():
-        if not isinstance(k, str) or not isinstance(v, str):
-            raise ValueError("Names file must use only string keys and string values.")
-        out[k] = v
-    return out
+        raise ValueError("Config file must be a JSON object.")
+
+    if "me" in raw or "names" in raw:
+        me = raw.get("me")
+        if me is not None and not isinstance(me, str):
+            raise ValueError('"me" must be a string.')
+        names = _validate_string_map(raw.get("names", {}), '"names"')
+        return Config(me=me, names=names)
+
+    # Legacy flat mapping (all keys are identifier→name).
+    return Config(me=None, names=_validate_string_map(raw, "Config file"))
 
 
 def _as_row_list(value: Any) -> list[Any]:
@@ -166,7 +212,12 @@ def merge_by_display_name(doc: dict[str, Any], mapping: dict[str, str]) -> dict[
     return out
 
 
-def apply_names_file(doc: dict[str, Any], names_path: Path | str) -> dict[str, Any]:
-    """Load names from path and return a document with merged display names."""
-    mapping = load_mapping(names_path)
-    return merge_by_display_name(doc, mapping)
+def apply_config(doc: dict[str, Any], config: Config) -> dict[str, Any]:
+    """Apply owner name + identifier mapping from a Config and return merged doc."""
+    return merge_by_display_name(doc, config.full_mapping)
+
+
+def apply_config_file(doc: dict[str, Any], config_path: Path | str) -> dict[str, Any]:
+    """Load config from path and return a document with merged display names."""
+    config = load_config(config_path)
+    return apply_config(doc, config)

@@ -1,13 +1,42 @@
-"""Tests for core.apply_names (merge rows by display name)."""
+"""Tests for core.apply_names (merge rows by display name + config loading)."""
 
 from __future__ import annotations
 
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import json
+import tempfile
+from pathlib import Path
 
 from core import apply_names as an
+
+
+def test_load_config_structured():
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump({"me": "Adi", "names": {"+1": "Bob"}}, f)
+        f.flush()
+        cfg = an.load_config(f.name)
+    assert cfg.me == "Adi"
+    assert cfg.names == {"+1": "Bob"}
+    assert cfg.full_mapping == {"+1": "Bob", "Me": "Adi"}
+
+
+def test_load_config_legacy_flat_mapping():
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump({"+1": "Bob", "+2": "Carol"}, f)
+        f.flush()
+        cfg = an.load_config(f.name)
+    assert cfg.me is None
+    assert cfg.names == {"+1": "Bob", "+2": "Carol"}
+    assert cfg.full_mapping == {"+1": "Bob", "+2": "Carol"}
+
+
+def test_config_full_mapping_merges_me_into_names():
+    cfg = an.Config(me="Owner", names={"x": "Alice"})
+    assert cfg.full_mapping == {"x": "Alice", "Me": "Owner"}
+
+
+def test_config_full_mapping_without_me():
+    cfg = an.Config(me=None, names={"x": "Alice"})
+    assert cfg.full_mapping == {"x": "Alice"}
 
 
 def test_merge_sums_two_ids_to_same_display_name():

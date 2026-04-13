@@ -50,19 +50,27 @@ Computes leaderboards from the database, writes **`data/leaderboard.json`**, the
 | Flag | Description |
 |------|-------------|
 | `--chat-id <ID>` | **Required.** Group chat to analyze. |
-| `--names <PATH>` | Optional JSON object mapping identifiers to display names. Multiple identifiers can map to the same name; their counts are **merged**, ranks and RRPM recomputed. |
-| `--top <N>` | Max rows per leaderboard in the terminal. **Default: 5.** |
+| `--config <PATH>` | JSON config with your name and identifier mappings. **Default:** `data/config.json` if it exists. |
+| `--top <N>` | Max rows per leaderboard in the terminal. **Default: 15.** |
 | `--json-only` | Only write `data/leaderboard.json`; do not print tables. |
 
-**Names file example** (`data/names.json` — create by hand or with your editor):
+**Config file** (`data/config.json`):
 
 ```json
 {
-  "+15551234567": "Alice",
-  "alice@icloud.com": "Alice",
-  "bob@example.com": "Bob"
+  "me": "Your Name",
+  "names": {
+    "+15551234567": "Alice",
+    "alice@icloud.com": "Alice",
+    "bob@example.com": "Bob"
+  }
 }
 ```
+
+- `"me"` — your display name. Replaces "Me" in all leaderboards so you don't have to map yourself.
+- `"names"` — identifier-to-name mappings. Multiple identifiers mapping to the same name have their counts **merged**, ranks and RRPM recomputed.
+
+Both keys are optional. A legacy flat mapping (no `me`/`names` keys) is also accepted.
 
 ### First-time workflow
 
@@ -71,10 +79,10 @@ Computes leaderboards from the database, writes **`data/leaderboard.json`**, the
 python discover.py --list-chats
 python discover.py --list-members --chat-id 42
 
-# (optional) create data/names.json from the member list
+# Create data/config.json from the member list output (see format above)
 
 # Phase 2: analysis
-python run.py --chat-id 42 --names data/names.json
+ç
 
 # JSON only (e.g. for scripting)
 python run.py --chat-id 42 --json-only
@@ -90,7 +98,7 @@ python run.py --chat-id 42 --json-only
 | Reaction Receivers / Givers | Who receives or gives the most reactions |
 | RRPM | Reactions received per message |
 | HaHas Received | Who gets the most HaHa reactions |
-| Messages with the Most HaHas | Individual messages with 3+ HaHas |
+| Messages with the Most HaHas | Pretty self-explanatory methinks |
 | Bangers | Who has the most messages that each earned 3+ HaHas |
 | Emphasizes / Questions Received | Emphasis and question reactions received |
 

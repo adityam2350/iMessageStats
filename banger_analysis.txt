@@ -1,0 +1,101 @@
+╭──────────────────────────────── 📱 iMessage Group Chat Analyzer ────────────────────────────────╮
+│ Fantasy                                                                                         │
+│ 11 participants  ·  58,373 messages  ·  5,260 reactions  ·  Sep 2025 – Apr 2026                 │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+          📨 Messages Sent                  🏆 Reaction Receivers       
+                                                                        
+    #   Participant        Messages       #   Participant        Count  
+ ───────────────────────────────────   ──────────────────────────────── 
+   🥇   Brendan K.            19797      🥇   Brendan K.          1396  
+   🥈   Andrew B.              8938      🥈   Michael T.           864  
+   🥉   Michael T.             8347      🥉   Chris K.             706  
+    4   Chris K.               6498       4   Andrew B.            669  
+    5   Aanas C.               5816       5   Aanas C.             621  
+    6   Surya D.               5709       6   Surya D.             486  
+    7   Lakshman S.            1154       7   Aditya M.            208  
+    8   Aditya M.              1137       8   Lakshman S.          188  
+    9   Chris G.                687       9   Chris G.              75  
+   10   Michael M.              290      10   Michael M.            47  
+                                                                        
+        🎁 Reaction Givers                       📈 RRPM               
+                                                                       
+    #   Participant        Count       #   Participant        Per Msg  
+ ────────────────────────────────   ────────────────────────────────── 
+   🥇   Brendan K.           929      🥇   Aditya M.             0.18  
+   🥈   Surya D.             913      🥈   Lakshman S.           0.16  
+   🥉   Aanas C.             891      🥉   Michael M.            0.16  
+    4   Andrew B.            777       4   Chris G.              0.11  
+    5   Michael T.           608       5   Chris K.              0.11  
+    6   Chris K.             428       6   Aanas C.              0.11  
+    7   Aditya M.            295       7   Michael T.            0.10  
+    8   Michael M.           170       8   Surya D.              0.09  
+    9   Lakshman S.          138       9   Andrew B.             0.07  
+   10   Chris G.             111      10   Brendan K.            0.07  
+                                                                       
+        😂 HaHas Received                  ‼️  Emphasizes Received        
+                                                                          
+    #   Participant        HaHas       #   Participant        Emphasizes  
+ ────────────────────────────────   ───────────────────────────────────── 
+   🥇   Brendan K.           621      🥇   Brendan K.                515  
+   🥈   Michael T.           424      🥈   Michael T.                248  
+   🥉   Chris K.             389      🥉   Chris K.                  204  
+    4   Aanas C.             375       4   Andrew B.                 193  
+    5   Andrew B.            354       5   Surya D.                  165  
+    6   Surya D.             235       6   Aanas C.                  150  
+    7   Lakshman S.          115       7   Aditya M.                  53  
+    8   Aditya M.            112       8   Lakshman S.                50  
+    9   Chris G.              36       9   Chris G.                   20  
+   10   Michael M.            31      10   Michael M.                  4  
+                                                                          
+        ❓ Questions Received         
+                                      
+    #   Participant        Questions  
+ ──────────────────────────────────── 
+   🥇   Michael T.                57  
+   🥈   Brendan K.                43  
+   🥉   Chris K.                  36  
+    4   Surya D.                  27  
+    5   Andrew B.                 26  
+    6   Aanas C.                  24  
+    7   Aditya M.                  6  
+    8   Lakshman S.                1  
+    9   Michael M.                 1  
+                                      
+
+                                  😂 Messages with the Most HaHas                                  
+                                                                                                   
+     #   Author & message                                                                      😂  
+ ───────────────────────────────────────────────────────────────────────────────────────────────── 
+    🥇   Aanas C.  "cus surya told me its time to start thinking playoffs when …"               6  
+    🥈   Aanas C.  "had the time of my life this weekend, driving my bad bitch …"               5  
+    🥉   Aanas C.  "moussa was there when this was made"                                        5  
+     4   Aanas C.  "￼cus this is better"                                                        5  
+     5   Aanas C.  "￼eat up puka u have a big game ahead of you today"                          5  
+     6   Aditya M.  "i just love pawds"                                                         5  
+     7   Aditya M.  "￼5 days Michael"                                                           5  
+     8   Aditya M.  "￼Chris when’d you start MMA"                                               5  
+     9   Brendan K.  "FUCK YOU PUSSY ARMENIAN"                                                  5  
+    10   Brendan K.  "I’d be great commish lowkey"                                              5  
+    11   Brendan K.  "I’m already on my 2nd day and you’re still in bed lmao"                   5  
+    12   Chris K.  "Nigga u can’t post ur cow nipples in 4k 2 feet from the cam…"               5  
+    13   Chris K.  "￼"                                                                          5  
+    14   Lakshman S.  "Brendan tryna be adi"                                                    5  
+    15   Michael M.  "￼"                                                                        5  
+                                                                                                   
+
+                💥 Bangers                
+                                          
+    #   Participant        Msgs w/ 3+ 😂  
+ ──────────────────────────────────────── 
+   🥇   Michael T.                    22  
+   🥈   Aanas C.                      17  
+   🥉   Andrew B.                     15  
+    4   Brendan K.                    15  
+    5   Chris K.                      15  
+    6   Aditya M.                      9  
+    7   Surya D.                       9  
+    8   Lakshman S.                    6  
+    9   Michael M.                     2  
+   10   Chris G.                       1  
+                                          

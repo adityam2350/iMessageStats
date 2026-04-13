@@ -5,7 +5,7 @@ These are plain data containers. No logic lives here.
 They are the shared language between parsing, stats, and display.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import IntEnum
 

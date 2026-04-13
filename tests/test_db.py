@@ -2,11 +2,6 @@
 tests/test_db.py — Unit tests for database boundary helpers.
 """
 
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
 from core.db import normalize_reaction_target_guid
 
 

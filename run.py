@@ -21,18 +21,29 @@ import core.stats as stats
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_LEADERBOARD_JSON = ROOT / "data" / "leaderboard.json"
+DEFAULT_CONFIG = ROOT / "data" / "config.json"
 
 console = Console()
 
 
-def _analyze(conn, chat_id: int):
-    raw_chats = db.fetch_group_chats(conn)
-    chat = next((c for c in raw_chats if c.chat_id == chat_id), None)
+def _find_chat(conn, chat_id: int) -> db.RawChat:
+    """Look up a group chat by ID, raising LookupError if not found."""
+    chat = next(
+        (c for c in db.fetch_group_chats(conn) if c.chat_id == chat_id),
+        None,
+    )
     if chat is None:
-        return None
+        raise LookupError(
+            f"No group chat found with ID {chat_id}. "
+            "Use `python discover.py --list-chats` to see available chats."
+        )
+    return chat
 
-    raw_handles = db.fetch_handles_for_chat(conn, chat_id)
-    raw_messages = db.fetch_messages_for_chat(conn, chat_id)
+
+def _compute_stats(conn, chat: db.RawChat) -> tuple[int, parser.ChatSummary, dict]:
+    """Fetch data for a chat and compute all leaderboards."""
+    raw_handles = db.fetch_handles_for_chat(conn, chat.chat_id)
+    raw_messages = db.fetch_messages_for_chat(conn, chat.chat_id)
     participant_map = parser.build_participant_map(raw_handles)
     messages, reactions = parser.parse_messages_and_reactions(raw_messages, participant_map)
     summary = parser.build_chat_summary(chat, messages, reactions)
@@ -48,21 +59,32 @@ def _analyze(conn, chat_id: int):
         "emphasizes_received": stats.emphasizes_received_leaderboard(reactions),
         "questions_received": stats.questions_received_leaderboard(reactions),
     }
-    return chat_id, summary, all_stats
+    return chat.chat_id, summary, all_stats
+
+
+def _resolve_config(explicit: Path | None) -> Path | None:
+    """Return the config path to use: explicit flag, default file, or None."""
+    if explicit is not None:
+        return explicit
+    if DEFAULT_CONFIG.is_file():
+        return DEFAULT_CONFIG
+    return None
 
 
 @click.command()
 @click.option("--chat-id", type=int, required=True, help="Group chat ID from discover.py.")
 @click.option(
-    "--names",
+    "--config",
+    "config_path",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     default=None,
-    help="Optional JSON file mapping identifiers to display names.",
+    help='JSON config with "me" (your name) and "names" (identifier mappings). '
+         f"Default: {DEFAULT_CONFIG} if it exists.",
 )
 @click.option(
     "--top",
     type=int,
-    default=5,
+    default=15,
     show_default=True,
     help="How many rows to show per leaderboard in the terminal.",
 )
@@ -73,7 +95,7 @@ def _analyze(conn, chat_id: int):
 )
 def main(
     chat_id: int,
-    names: Path | None,
+    config_path: Path | None,
     top: int,
     json_only: bool,
 ) -> None:
@@ -83,24 +105,24 @@ def main(
         console.print(f"[bold red]Error:[/bold red] {e}")
         sys.exit(1)
 
-    with conn:
-        result = _analyze(conn, chat_id)
-
-    if result is None:
-        console.print(
-            f"[bold red]Error:[/bold red] No group chat found with ID {chat_id}. "
-            "Use [cyan]python discover.py --list-chats[/cyan]."
-        )
+    try:
+        with conn:
+            chat = _find_chat(conn, chat_id)
+            cid, summary, all_stats = _compute_stats(conn, chat)
+    except LookupError as e:
+        console.print(f"[bold red]Error:[/bold red] {e}")
         sys.exit(1)
 
-    cid, summary, all_stats = result
     doc = serializer.to_dict(cid, summary, all_stats, display_top_n=top)
-    if names is not None:
-        doc = apply_names.apply_names_file(doc, names)
+
+    cfg = _resolve_config(config_path)
+    if cfg is not None:
+        doc = apply_names.apply_config_file(doc, cfg)
+
     serializer.write_json(doc, DEFAULT_LEADERBOARD_JSON)
 
     if not json_only:
-        print_leaderboard.render_leaderboard_file(DEFAULT_LEADERBOARD_JSON, top_n=top)
+        print_leaderboard.render_leaderboard_doc(doc, top_n=top)
 
 
 if __name__ == "__main__":

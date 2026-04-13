@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
 discover.py — List group chats and chat members (discovery phase).
-
-No stats, serialization, or name mapping — only reads from chat.db and prints.
 """
 
 from __future__ import annotations
@@ -68,7 +66,7 @@ def main(list_chats: bool, list_members: bool, chat_id: int | None) -> None:
             )
 
         if list_members:
-            handles = db.fetch_handles_for_chat(conn, chat_id)
+            handles = db.fetch_all_participants_for_chat(conn, chat_id)
             for h in handles:
                 console.print(h.identifier)
 

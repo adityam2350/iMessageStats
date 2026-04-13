@@ -1,7 +1,9 @@
 """
-print_leaderboard.py — Render a validated leaderboard JSON document to the terminal.
+print_leaderboard.py — Render leaderboard documents to the terminal using Rich tables.
 
-Reads JSON via serializer, converts rows to domain entry types, and prints Rich tables.
+Accepts either an in-memory dict (render_leaderboard_doc) or a JSON path on disk
+(render_leaderboard_file). Internal helpers convert raw dict rows back into domain
+entry types for the shared Rich rendering functions.
 """
 
 from __future__ import annotations
@@ -224,16 +226,15 @@ def _rows_to_banger_entries(rows: object) -> list[BangerEntry]:
     return out
 
 
-def render_leaderboard_file(path: Path | str, top_n: int | None = 5) -> None:
+def render_leaderboard_doc(doc: dict, top_n: int | None = 5) -> None:
     """
-    Read a leaderboard JSON file from disk, validate it, and print all tables.
+    Render a validated leaderboard document (as returned by ``serializer.to_dict``
+    or ``serializer.from_dict``) to the terminal.
 
     ``top_n`` limits how many rows are shown per leaderboard (``None`` = show all).
     """
-    raw = read_json(path)
-    doc = from_dict(raw)
     summary = _parse_summary_block(doc.get("summary"))
-    lb = doc["leaderboards"]
+    lb = doc.get("leaderboards", {})
 
     print_chat_summary(summary)
     print_all_leaderboards(
@@ -248,3 +249,8 @@ def render_leaderboard_file(path: Path | str, top_n: int | None = 5) -> None:
         questions_received=_rows_to_leaderboard_entries(lb.get("questions_received")),
         top_n=top_n,
     )
+
+
+def render_leaderboard_file(path: Path | str, top_n: int | None = 5) -> None:
+    """Read a leaderboard JSON file from disk, validate, and print tables."""
+    render_leaderboard_doc(from_dict(read_json(path)), top_n=top_n)

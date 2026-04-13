@@ -83,32 +83,19 @@ def to_dict(
     display_top_n: int | None = None,
 ) -> dict[str, Any]:
     """Build a versioned document with all leaderboard tables (full data, not sliced)."""
-    ms = all_stats["messages_sent"]
-    rr = all_stats["reaction_receivers"]
-    rg = all_stats["reaction_givers"]
-    rpm = all_stats["rrpm"]
-    hh = all_stats["hahas_received"]
-    mhm = all_stats["most_haha_messages"]
-    bang = all_stats["bangers"]
-    em = all_stats["emphasizes_received"]
-    qu = all_stats["questions_received"]
+    lb = {
+        key: leaderboard_rows_to_dicts(all_stats[key], rrpm=(key == "rrpm"))
+        for key in LEADERBOARD_KEYS
+        if key != "most_haha_messages"
+    }
+    lb["most_haha_messages"] = banger_rows_to_dicts(all_stats["most_haha_messages"])
 
     return {
         "version": CURRENT_VERSION,
         "chat_id": chat_id,
         "summary": chat_summary_to_dict(summary),
         "display_top_n": display_top_n,
-        "leaderboards": {
-            "messages_sent": leaderboard_rows_to_dicts(ms),
-            "reaction_receivers": leaderboard_rows_to_dicts(rr),
-            "reaction_givers": leaderboard_rows_to_dicts(rg),
-            "rrpm": leaderboard_rows_to_dicts(rpm, rrpm=True),
-            "hahas_received": leaderboard_rows_to_dicts(hh),
-            "most_haha_messages": banger_rows_to_dicts(mhm),
-            "bangers": leaderboard_rows_to_dicts(bang),
-            "emphasizes_received": leaderboard_rows_to_dicts(em),
-            "questions_received": leaderboard_rows_to_dicts(qu),
-        },
+        "leaderboards": lb,
     }
 
 

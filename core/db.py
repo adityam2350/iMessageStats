@@ -96,7 +96,7 @@ def fetch_group_chats(conn: sqlite3.Connection) -> list[RawChat]:
 
 
 def fetch_handles_for_chat(conn: sqlite3.Connection, chat_id: int) -> list[RawHandle]:
-    """Return all participants (handles) in a given chat."""
+    """Return all participants (handles) in a given chat via chat_handle_join."""
     query = """
         SELECT h.ROWID, h.id
         FROM handle h
@@ -104,6 +104,46 @@ def fetch_handles_for_chat(conn: sqlite3.Connection, chat_id: int) -> list[RawHa
         WHERE chj.chat_id = ?
     """
     rows = conn.execute(query, (chat_id,)).fetchall()
+    return [RawHandle(*row) for row in rows]
+
+
+def fetch_all_participants_for_chat(
+    conn: sqlite3.Connection, chat_id: int,
+) -> list[RawHandle]:
+    """
+    Return every identifier that sent a message in this chat.
+
+    Unlike fetch_handles_for_chat this includes orphan handles (not in
+    chat_handle_join) and the local user (is_from_me). The local user
+    is returned as RawHandle(ME_HANDLE_ID, "Me").
+    """
+    query = """
+        WITH owner_handles AS (
+            SELECT DISTINCT m2.handle_id
+            FROM message m2
+            INNER JOIN chat_message_join cmj2 ON cmj2.message_id = m2.ROWID
+            WHERE cmj2.chat_id = :chat_id AND m2.is_from_me = 1
+        )
+        SELECT DISTINCT
+            CASE WHEN m.is_from_me = 1 OR m.handle_id IN owner_handles
+                 THEN :me_handle_id
+                 ELSE m.handle_id
+            END AS hid,
+            CASE WHEN m.is_from_me = 1 OR m.handle_id IN owner_handles
+                 THEN 'Me'
+                 ELSE COALESCE(h.id, 'Unknown (' || m.handle_id || ')')
+            END AS identifier
+        FROM message m
+        INNER JOIN chat_message_join cmj ON cmj.message_id = m.ROWID
+        LEFT JOIN handle h ON h.ROWID = m.handle_id
+        WHERE cmj.chat_id = :chat_id
+          AND m.handle_id IS NOT NULL
+        ORDER BY identifier
+    """
+    rows = conn.execute(query, {
+        "chat_id": chat_id,
+        "me_handle_id": ME_HANDLE_ID,
+    }).fetchall()
     return [RawHandle(*row) for row in rows]
 
 
@@ -118,7 +158,9 @@ def fetch_messages_for_chat(conn: sqlite3.Connection, chat_id: int) -> list[RawM
         SELECT
             m.ROWID,
             m.guid,
-            COALESCE(m.handle_id, :me_handle_id) AS handle_id,
+            CASE WHEN m.is_from_me = 1 THEN :me_handle_id
+                 ELSE COALESCE(m.handle_id, :me_handle_id)
+            END AS handle_id,
             m.text,
             m.associated_message_type,
             m.associated_message_guid,
@@ -133,31 +175,15 @@ def fetch_messages_for_chat(conn: sqlite3.Connection, chat_id: int) -> list[RawM
         "epoch_offset": APPLE_EPOCH_OFFSET_SECONDS,
         "me_handle_id": ME_HANDLE_ID,
     }).fetchall()
-    out: list[RawMessage] = []
-    for row in rows:
-        (
-            message_id,
-            guid,
-            handle_id,
-            text,
-            associated_message_type,
-            assoc_guid_sql,
-            date_seconds,
-        ) = row
-        associated_message_guid = (
-            None
-            if assoc_guid_sql is None
-            else normalize_reaction_target_guid(assoc_guid_sql)
+    return [
+        RawMessage(
+            message_id=mid,
+            guid=guid,
+            handle_id=hid,
+            text=text,
+            associated_message_type=amt,
+            associated_message_guid=normalize_reaction_target_guid(aguid) if aguid else None,
+            date_seconds=ds,
         )
-        out.append(
-            RawMessage(
-                message_id=message_id,
-                guid=guid,
-                handle_id=handle_id,
-                text=text,
-                associated_message_type=associated_message_type,
-                associated_message_guid=associated_message_guid,
-                date_seconds=date_seconds,
-            )
-        )
-    return out
+        for mid, guid, hid, text, amt, aguid, ds in rows
+    ]
